@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d0d1a">
+<title>圆盘纪元</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;padding:0;background:#0d0d1a;color:#e0e0e0;font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;overflow:hidden;height:100dvh;display:flex;flex-direction:column;user-select:none}
+
+/* ===== SPLASH SCREEN ===== */
+#splash{position:fixed;inset:0;background:#0d0d1a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity 0.6s}
+#splash.logout{opacity:0;pointer-events:none}
+.splash-logo{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#7ab8ff 0%,#ff6b35 100%);display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:24px;animation:splashPulse 2s infinite}
+.splash-title{font-size:28px;font-weight:700;color:#fff;margin-bottom:8px;letter-spacing:4px}
+.splash-sub{font-size:13px;color:#888;letter-spacing:2px}
+@keyframes splashPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.splash-hint{margin-top:40px;font-size:12px;color:#555;animation:fadeIn 1s 1.5s both}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ===== TOP HUD ===== */
+#hud{background:#16213e;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:48px}
+.hud-faction{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700}
+.hud-faction span{padding:2px 8px;border-radius:4px}
+.hud-faction.sky span{background:#7ab8ff;color:#0d0d1a}
+.hud-faction.ember span{background:#ff6b35;color:#fff}
+.hud-center{display:flex;flex-direction:column;align-items:center;gap:2px}
+#turnLabel{font-size:11px;color:#888}
+#timerDisplay{font-size:13px;font-weight:700;color:#ffd700;min-width:40px;text-align:center}
+.hud-right{display:flex;align-items:center;gap:12px}
+.hud-hp{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700}
+.hud-hp.sky{color:#7ab8ff}
+.hud-hp.ember{color:#ff6b35}
+#energyBox{display:flex;align-items:center;gap:4px;background:#1a1a2e;padding:3px 10px;border-radius:20px;border:1px solid #333}
+#energyBox .e-icon{font-size:14px}
+#energyBox .e-val{font-size:14px;font-weight:700;color:#ffd700}
+
+/* Timer bar */
+#timerBar{height:3px;background:#222;flex-shrink:0}
+#timerBar div{height:100%;background:linear-gradient(90deg,#ffd700,#ff6b35);transition:width 1s linear;border-radius:2px}
+
+/* Faction banner */
+#factionBanner{text-align:center;padding:4px;font-size:12px;font-weight:700;background:linear-gradient(90deg,#1e3a5f,#1a1a2e 50%,#2a1208);color:#ccc;flex-shrink:0}
+
+/* ===== BOARD ===== */
+#boardWrap{flex:1;overflow:auto;padding:6px;display:flex;align-items:flex-start;justify-content:center;-webkit-overflow-scrolling:touch}
+#board{display:grid;grid-template-columns:repeat(9,56px);grid-template-rows:repeat(5,56px);gap:1px;background:#222;border-radius:8px;padding:1px;flex-shrink:0}
+.cell{width:56px;height:56px;border-radius:4px;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;transition:background 0.15s}
+.cell.heaven-half{background:linear-gradient(135deg,#1e2a4a,#162040)}
+.cell.ember-half{background:linear-gradient(135deg,#2a1210,#1a0d08)}
+.cell.base-heaven{background:linear-gradient(135deg,#0a1a3a,#0d2060)}
+.cell.base-ember{background:linear-gradient(135deg,#3a0a0a,#600d0d)}
+.cell.select-heaven{background:rgba(74,144,217,0.5);box-shadow:inset 0 0 10px #7ab8ff}
+.cell.select-ember{background:rgba(224,92,42,0.5);box-shadow:inset 0 0 10px #ff6b35}
+.cell.deployable{background:rgba(80,220,100,0.25);box-shadow:inset 0 0 8px #50dc64}
+.cell.attack-target{background:rgba(255,60,60,0.3);box-shadow:inset 0 0 8px #ff3c3c}
+.cell.move-target{background:rgba(255,215,0,0.2)}
+
+/* Unit token */
+.unit-token{width:42px;height:42px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;border:2px solid;box-shadow:0 2px 8px rgba(0,0,0,0.6);transition:transform 0.15s;cursor:pointer;animation:deployAnim 0.3s ease}
+.unit-token:active{transform:scale(0.92)}
+.unit-token.heaven{background:linear-gradient(135deg,#5a9fd4,#1a3a6a);border-color:#7ab8ff}
+.unit-token.ember{background:linear-gradient(135deg,#d45a20,#6a1a05);border-color:#ff8855}
+.unit-token.sleeping{opacity:0.6}
+.unit-token .u-hp-ring{position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;border:2px solid #0d0d1a;font-size:7px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+.unit-token .u-hp-ring.hi{background:#4caf50}
+.unit-token .u-hp-ring.mid{background:#ff9800}
+.unit-token .u-hp-ring.low{background:#f44336}
+.unit-token .u-hp-bar{position:absolute;bottom:-6px;left:2px;right:2px;height:3px;background:#333;border-radius:2px;overflow:hidden}
+.unit-token .u-hp-fill{height:100%;transition:width 0.3s}
+.unit-token .u-hp-fill.hi{background:#4caf50}
+.unit-token .u-hp-fill.mid{background:#ff9800}
+.unit-token .u-hp-fill.low{background:#f44336}
+.unit-token .u-name{font-size:7px;font-weight:700;color:#fff;text-align:center;line-height:1;max-width:38px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unit-token .u-stats{font-size:7px;color:rgba(255,255,255,0.7);display:flex;gap:3px}
+.unit-token .u-stat-icon{font-size:8px}
+
+/* Base (main堡) */
+.base-token{width:44px;height:44px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid;box-shadow:0 0 12px;position:relative}
+.base-token.heaven{background:radial-gradient(#0d2060,#061040);border-color:#7ab8ff;box-shadow:0 0 16px rgba(122,184,255,0.5)}
+.base-token.ember{background:radial-gradient(#600d0d,#300606);border-color:#ff6b35;box-shadow:0 0 16px rgba(255,107,53,0.5)}
+.base-token .b-hp{font-size:11px;font-weight:700;color:#fff}
+.base-token .b-name{font-size:7px;color:rgba(255,255,255,0.6)}
+@keyframes deployAnim{from{transform:scale(0) translateY(-20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+
+/* ===== BOTTOM PANEL ===== */
+#bottomPanel{background:#0f0f1e;border-top:1px solid #222;display:flex;flex-direction:column;flex-shrink:0;max-height:48dvh;transition:max-height 0.3s}
+#bottomPanel.minimized{max-height:48px}
+#handArea{background:#16213e;padding:10px 12px 6px}
+#handLabel{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#handLabel span{font-size:12px;color:#888}
+#handLabel .cards-count{font-size:12px;color:#aaa}
+#handScroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+#handScroll::-webkit-scrollbar{display:none}
+.card{min-width:72px;height:90px;border-radius:8px;border:2px solid #555;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all 0.15s;position:relative;flex-shrink:0;-webkit-user-select:none}
+.card:active{transform:scale(0.97)}
+.card.heaven{background:linear-gradient(135deg,#3a6a9f,#1a3a6a);border-color:#5a8ac4}
+.card.ember{background:linear-gradient(135deg,#c44a20,#6a1a05);border-color:#d45a28}
+.card.selected{border-color:#fff;box-shadow:0 0 16px rgba(255,255,255,0.5);transform:translateY(-6px)}
+.card.disabled{opacity:0.45;cursor:not-allowed}
+.card.unplayable{border-color:#444;opacity:0.3}
+.card .c-cost{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#1a1a2e;border:1px solid #555;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#ffd700}
+.card .c-name{font-size:10px;font-weight:700;color:#fff;text-align:center}
+.card .c-icon{font-size:18px}
+.card .c-stats{font-size:8px;color:rgba(255,255,255,0.7);display:flex;gap:4px}
+
+/* Action bar */
+#actionBar{background:#0a0a16;padding:8px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.act-btn{padding:8px 16px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.act-btn:active{transform:scale(0.96)}
+.act-btn.primary{background:#7ab8ff;color:#0d0d1a}
+.act-btn.primary:hover{background:#5a9ae0}
+.act-btn.danger{background:#c0401a;color:#fff}
+.act-btn.secondary{background:#2a2a3e;color:#aaa;border:1px solid #444}
+.act-btn:disabled{opacity:0.4;cursor:not-allowed}
+#actionHint{flex:1;font-size:11px;color:#666;line-height:1.4}
+
+/* Skill popup */
+#skillPopup{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:flex-end;justify-content:center;z-index:200;padding:20px}
+#skillPopup.show{display:flex}
+#skillCard{background:#1a1a2e;border:1px solid #333;border-radius:16px;padding:20px;width:min(320px,90vw);animation:slideUp 0.25s ease}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+#skillCard h3{font-size:16px;color:#fff;margin:0 0 8px}
+#skillCard p{font-size:13px;color:#aaa;margin:0 0 16px;line-height:1.5}
+#skillCard .sk-btns{display:flex;gap:8px}
+#skActivate{display:none}
+
+/* ===== OVERLAYS ===== */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:500;padding:20px}
+.overlay.show{display:flex}
+.overlay h2{font-size:1.8rem;color:#fff;margin:0 0 8px;text-align:center}
+.overlay p{font-size:1rem;color:#aaa;margin:0 0 20px;text-align:center}
+.overlay .o-icon{font-size:64px;margin-bottom:16px}
+
+/* Game Over */
+#gameOverOverlay .winner-sky{color:#7ab8ff}
+#gameOverOverlay .winner-ember{color:#ff6b35}
+.restart-btn{padding:12px 40px;border-radius:12px;border:none;background:#7ab8ff;color:#0d0d1a;font-weight:700;font-size:16px;cursor:pointer;font-family:inherit}
+
+/* Start menu */
+#startMenu .menu-title{font-size:2rem;font-weight:700;color:#fff;margin-bottom:4px;letter-spacing:4px}
+#startMenu .menu-sub{font-size:12px;color:#666;margin-bottom:32px;letter-spacing:2px}
+#startMenu .menu-btn{padding:14px 48px;border-radius:12px;border:none;font-weight:700;font-size:16px;cursor:pointer;font-family:inherit;transition:all 0.15s}
+#startMenu .menu-btn.start{background:linear-gradient(135deg,#7ab8ff,#5a80c4);color:#fff}
+#startMenu .menu-btn.start:hover{background:linear-gradient(135deg,#5a9ae0,#3a60a4)}
+#startMenu .menu-btn:hover{transform:scale(1.03)}
+
+/* Notification toast */
+#toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a2e;border:1px solid #444;border-radius:8px;padding:8px 20px;font-size:13px;color:#ddd;opacity:0;transition:all 0.3s;z-index:300;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Effect floats */
+@keyframes floatUp{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-40px)}}
+.float-text{position:absolute;font-size:14px;font-weight:700;pointer-events:none;z-index:100;animation:floatUp 0.8s ease forwards;text-shadow:0 1px 3px rgba(0,0,0,0.8)}
+.float-text.dmg{color:#ff4444}
+.float-text.heal{color:#44ff44}
+.float-text.shield{color:#44aaff}
+</style>
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash">
+  <div class="splash-logo">🎴</div>
+  <div class="splash-title">圆盘纪元</div>
+  <div class="splash-sub">NAOHAI DISC</div>
+  <div class="splash-hint">点击任意处开始</div>
+</div>
+
+<!-- TOP HUD -->
+<div id="hud">
+  <div class="hud-faction sky"><span id="playerFactionLabel">天界</span></div>
+  <div class="hud-center">
+    <div id="turnLabel">第 1 回合</div>
+    <div id="timerDisplay">⏱ 60s</div>
+  </div>
+  <div class="hud-right">
+    <div class="hud-hp sky">
+      <span id="heavenHP">🏰 20</span>
+    </div>
+    <div class="hud-hp ember">
+      <span id="emberHP">🏰 20</span>
+    </div>
+    <div id="energyBox">
+      <span class="e-icon">⚡</span>
+      <span id="energyVal" class="e-val">3/10</span>
+    </div>
+  </div>
+</div>
+<div id="timerBar"><div id="timerFill" style="width:100%"></div></div>
+<div id="factionBanner">⚔ 天界天庭 · 你的回合</div>
+
+<!-- BOARD -->
+<div id="boardWrap">
+  <div id="board"></div>
+</div>
+
+<!-- BOTTOM PANEL -->
+<div id="bottomPanel">
+  <div id="handArea">
+    <div id="handLabel">
+      <span>📤 手牌</span>
+      <span class="cards-count" id="cardCount">0/5</span>
+    </div>
+    <div id="handScroll"></div>
+  </div>
+  <div id="actionBar">
+    <button class="act-btn primary" id="endTurnBtn" onclick="endTurn()">结束回合</button>
+    <button class="act-btn danger" onclick="surrender()">投降</button>
+    <div id="actionHint">选择手牌，再点击己方空格部署</div>
+  </div>
+</div>
+
+<!-- SKILL POPUP -->
+<div id="skillPopup">
+  <div id="skillCard">
+    <h3 id="skTitle">技能</h3>
+    <p id="skDesc">技能描述</p>
+    <div class="sk-btns">
+      <button class="act-btn secondary" onclick="closeSkill()">关闭</button>
+      <button class="act-btn primary" id="skActivate" onclick="activateSkill()">激活</button>
+    </div>
+  </div>
+</div>
+
+<!-- START MENU -->
+<div id="startMenu" class="overlay">
+  <div class="o-icon">🎴</div>
+  <h2 class="menu-title">圆盘纪元</h2>
+  <div class="menu-sub">NAOHAI DISC</div>
+  <button class="menu-btn start" onclick="startGame()">开始游戏</button>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameOverOverlay" class="overlay">
+  <div class="o-icon" id="goIcon">🏆</div>
+  <h2 id="goTitle">游戏结束</h2>
+  <p id="goDetail">详情</p>
+  <button class="restart-btn" onclick="restartGame()">再来一局</button>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// =============================
+//  UNIT TYPES (fixed data)
+// =============================
+const UNIT_TYPES = {
+  discThrower: {
+    name:'哪吒', icon:'🔥', faction:'heaven',
+    hp:6, atk:3, mov:2, rng:3, cost:2,
+    skill:'三头六臂', skCost:2, skDesc:'对目标及相邻1格敌人各造成2点伤害',
+    skRange:3, skSelf:false, skDmg:2, skAOE:1
+  },
+  airstream: {
+    name:'敖丙', icon:'❄️', faction:'heaven',
+    hp:4, atk:1, mov:3, rng:2, cost:2,
+    skill:'冰封护盾', skCost:1, skDesc:'为全场己方单位提供1层护盾',
+    skRange:99, skSelf:true, skDmg:0, skShieldAll:1
+  },
+  discHunter: {
+    name:'鹿童', icon:'🏹', faction:'ember',
+    hp:8, atk:5, mov:3, rng:1, cost:4,
+    skill:'穿云箭', skCost:3, skDesc:'对直线上所有敌人造成3点伤害',
+    skRange:5, skSelf:false, skDmg:3, skLine:true
+  },
+  discForger: {
+    name:'鹤童', icon:'🌪️', faction:'ember',
+    hp:5, atk:2, mov:2, rng:2, cost:3,
+    skill:'风之壁垒', skCost:2, skDesc:'己方全体MOV+1，持续2回合',
+    skRange:99, skSelf:true, skDmg:0, skBuffMov:1
+  },
+  skyArbiter: {
+    name:'申公豹', icon:'🌑', faction:'ember',
+    hp:15, atk:6, mov:2, rng:2, cost:7,
+    skill:'暗影豹影', skCost:4, skDesc:'对目标造成5点伤害，若击杀则回复2能量',
+    skRange:2, skSelf:false, skDmg:5, skKillEnergy:2
+  },
+  skySentinel: {
+    name:'增长天王', icon:'🛡️', faction:'heaven',
+    hp:12, atk:4, mov:1, rng:1, cost:5,
+    skill:'铜墙铁壁', skCost:3, skDesc:'为目标提供3层护盾',
+    skRange:4, skSelf:false, skDmg:0, skShieldTarget:3
+  },
+  windDancer: {
+    name:'雷震子', icon:'⚡', faction:'heaven',
+    hp:5, atk:3, mov:4, rng:3, cost:3,
+    skill:'风雷闪', skCost:2, skDesc:'瞬移至多3格，对目标造成3点伤害',
+    skRange:3, skSelf:false, skDmg:3, skTeleport:true
+  }
+};
+
+// =============================
+//  STATE
+// =============================
+let board = [];       // 5x9 grid
+let units = [];
+let uid = 0;
+let turn = 1;
+let energy = 3;
+let maxEnergy = 10;
+let selectedCard = null;
+let selectedUnit = null;
+let actionMode = null;  // 'deploy' | 'move' | 'attack' | 'skill'
+let cardsPlayedThisTurn = 0;
+let timerInterval = null;
+let timeLeft = 60;
+let gameActive = false;
+let hand = [];         // array of card objects
+let deck = [];          // array of card ids
+let discard = [];
+let heavenHP = 20, emberHP = 20;
+let isPlayerSky = true;  // player is sky (heaven) faction
+
+// =============================
+//  UTIL
+// =============================
+function $(id){return document.getElementById(id)}
+function toast(msg){
+  $('toast').textContent=msg;
+  $('toast').classList.add('show');
+  setTimeout(()=>$('toast').classList.remove('show'),1800);
+}
+function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
+function manhattan(x1,y1,x2,y2){return Math.abs(x1-x2)+Math.abs(y1-y2)}
+function clamp(v,min,max){return Math.min(max,Math.max(min,v))}
+
+// =============================
+//  SAVE / LOAD
+// =============================
+function saveGame(){
+  if(!gameActive) return;
+  const state = {
+    turn, energy, maxEnergy, cardsPlayedThisTurn,
+    heavenHP, emberHP, hand: hand.map(c=>c.id), units: units.map(u=>({
+      id:u.id, typeId:u.typeId, x:u.x, y:u.y, hp:u.hp,
+      faction:u.faction, hasMoved:u.hasMoved, hasAttacked:u.hasAttacked,
+      sleeping:u.sleeping, shield:u.shield||0, movBuff:u.movBuff||0
+    }))
+  };
+  localStorage.setItem('discEraSave', JSON.stringify(state));
+}
+function loadGame(){
+  const raw = localStorage.getItem('discEraSave');
+  if(!raw) return null;
+  try{return JSON.parse(raw)}catch(e){return null}
+}
+function clearSave(){localStorage.removeItem('discEraSave')}
+
+// =============================
+//  INIT
+// =============================
+function initBoard(){
+  board = [];
+  for(let y=0;y<5;y++){
+    board[y]=[];
+    for(let x=0;x<9;x++) board[y][x]=null;
+  }
+  // bases
+  board[2][0]={isBase:true,faction:'heaven'};
+  board[2][8]={isBase:true,faction:'ember'};
+}
+
+function buildDeck(faction){
+  const types=Object.entries(UNIT_TYPES).filter(([,t])=>t.faction===faction);
+  const deck=[];
+  types.forEach(([id,t])=>{
+    const copies=id==='skyArbiter'?1:3;
+    for(let i=0;i<copies;i++) deck.push({id:`${id}_${i}_${faction}`, typeId:id, faction});
+  });
+  return shuffle(deck);
+}
+
+function drawCard(){
+  if(hand.length>=5) return null;
+  if(deck.length===0){
+    if(discard.length===0) return null;
+    deck.push(...shuffle(discard));
+    discard=[];
+  }
+  const card=deck.pop();
+  hand.push(card);
+  return card;
+}
+
+function startGame(faction='heaven'){
+  isPlayerSky=(faction==='heaven');
+  // init state
+  turn=1; energy=3; cardsPlayedThisTurn=0;
+  heavenHP=20; emberHP=20;
+  units=[]; uid=0; selectedCard=null; selectedUnit=null; actionMode=null;
+  hand=[];
+  initBoard();
+  // build decks
+  const skyDeck=buildDeck('heaven');
+  const emberDeck=buildDeck('ember');
+  // give player sky deck, AI gets ember
+  if(faction==='heaven'){
+    deck=[...skyDeck]; discard=[];
+  } else {
+    deck=[...emberDeck]; discard=[];
+  }
+  // draw initial hand
+  for(let i=0;i<3;i++) drawCard();
+  gameActive=true;
+  $('startMenu').classList.remove('show');
+  renderAll();
+  startTimer();
+  updatePhaseUI('DRAW_PHASE');
+}
+
+function restartGame(){
+  clearSave();
+  $('gameOverOverlay').classList.remove('show');
+  startGame(isPlayerSky?'heaven':'ember');
+}
+
+// =============================
+//  TURN FLOW
+// =============================
+function startDrawPhase(){
+  energy=Math.min(energy+1,10);
+  // Shield decay at turn start
+  units.forEach(u=>{
+    if(u.shield>0){u.shield=Math.max(0,u.shield-1);showFloat(u.x,u.y,'🛡️-1','shield');}
+  });
+  drawCard();
+  cardsPlayedThisTurn=0;
+  units.forEach(u=>{u.hasMoved=false;u.hasAttacked=false;u.sleeping=false;u.dead=false});
+  renderAll();
+  updatePhaseUI('ACTION_PHASE');
+  startTimer();
+}
+
+function endTurn(){
+  if(!gameActive) return;
+  stopTimer();
+  saveGame();
+  runAITurn(()=>{
+    turn++;
+    startDrawPhase();
+  });
+}
+
+function updatePhaseUI(phase){
+  const labels={
+    'DRAW_PHASE':'抽牌阶段',
+    'ACTION_PHASE':'⚔ 你的回合',
+    'RESOLUTION_PHASE':'结算阶段',
+    'END_PHASE':'结束阶段'
+  };
+  $('factionBanner').textContent=labels[phase]||phase;
+  $('turnLabel').textContent=`第 ${turn} 回合`;
+}
+
+function gameOver(winner){
+  gameActive=false;
+  stopTimer();
+  clearSave();
+  const isSkyWin=winner==='heaven';
+  $('goIcon').textContent=isSkyWin?'🏆':'💀';
+  $('goTitle').innerHTML=isSkyWin
+    ? '<span class="winner-sky">天庭胜利！</span>'
+    : '<span class="winner-ember">炼狱胜利！</span>';
+  $('goDetail').textContent=`第 ${turn} 回合 · 主堡沦陷`;
+  $('gameOverOverlay').classList.add('show');
+}
+
+// =============================
+//  TIMER
+// =============================
+function startTimer(){
+  stopTimer();
+  timeLeft=60;
+  updateTimerUI();
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    updateTimerUI();
+    if(timeLeft<=0){stopTimer();endTurn();}
+  },1000);
+}
+function stopTimer(){
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+}
+function updateTimerUI(){
+  $('timerDisplay').textContent=`⏱ ${timeLeft}s`;
+  $('timerFill').style.width=(timeLeft/60*100)+'%';
+}
+
+// =============================
+//  RENDER
+// =============================
+function renderAll(){
+  renderBoard();
+  renderHand();
+  renderHUD();
+}
+
+function renderHUD(){
+  $('heavenHP').textContent=`🏰 ${heavenHP}`;
+  $('emberHP').textContent=`🏰 ${emberHP}`;
+  $('energyVal').textContent=`${energy}/${maxEnergy}`;
+  $('turnLabel').textContent=`第 ${turn} 回合`;
+  $('playerFactionLabel').textContent=isPlayerSky?'天界':'炼狱';
+  $('cardCount').textContent=`${hand.length}/5`;
+}
+
+function renderBoard(){
+  const boardEl=$('board');
+  boardEl.innerHTML='';
+  for(let y=0;y<5;y++){
+    for(let x=0;x<9;x++){
+      const cell=document.createElement('div');
+      cell.className='cell';
+      cell.dataset.x=x; cell.dataset.y=y;
+
+      const info=board[y][x];
+      if(info&&info.isBase){
+        const base=document.createElement('div');
+        base.className=`base-token ${info.faction}`;
+        base.innerHTML=`<div class="b-hp">${info.faction==='heaven'?heavenHP:emberHP}</div><div class="b-name">主堡</div>`;
+        base.onclick=()=>onBaseClick(info.faction);
+        cell.appendChild(base);
+        if(info.faction==='heaven') cell.classList.add('base-heaven');
+        else cell.classList.add('base-ember');
+      } else {
+        if(x<=4) cell.classList.add('heaven-half');
+        else cell.classList.add('ember-half');
+      }
+
+      // unit on this cell
+      const u=units.find(u=>u.x===x&&u.y===y&&!u.dead);
+      if(u){
+        const tok=renderUnit(u);
+        cell.appendChild(tok);
+      }
+
+      // highlight classes
+      if(selectedCard&&!u&&isPlayerSky&&x<=4){
+        cell.classList.add('deployable');
+        cell.onclick=()=>deployCard(x,y);
+      } else if(selectedUnit&&actionMode==='move'&&!u){
+        const dist=manhattan(selectedUnit.x,selectedUnit.y,x,y);
+        const mov=(selectedUnit.movBuff||0)+UNIT_TYPES[selectedUnit.typeId].mov;
+        if(dist>0&&dist<=mov) cell.classList.add('move-target');
+        cell.onclick=()=>moveUnit(x,y);
+      } else if(selectedUnit&&actionMode==='attack'&&u&&u.faction!==selectedUnit.faction&&!u.dead){
+        cell.classList.add('attack-target');
+        cell.onclick=()=>attackTarget(u);
+      } else {
+        cell.onclick=()=>onCellClick(x,y);
+      }
+
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function renderUnit(u){
+  const t=UNIT_TYPES[u.typeId];
+  const tok=document.createElement('div');
+  tok.className=`unit-token ${t.faction}${u.sleeping?' sleeping':''}`;
+  const hpPct=(u.hp/UNIT_TYPES[u.typeId].hp)*100;
+  const hpClass=hpPct>60?'hi':hpPct>30?'mid':'low';
+  tok.innerHTML=`
+    <div class="u-hp-ring ${hpClass}">${u.hp}</div>
+    <div class="u-name">${t.name}</div>
+    <div class="u-stats"><span>⚔${t.atk}</span><span>🏃${(t.mov+(u.movBuff||0))}</span></div>
+    <div class="u-hp-bar"><div class="u-hp-fill ${hpClass}" style="width:${hpPct}%"></div></div>
+  `;
+  tok.onclick=(e)=>{e.stopPropagation();onUnitClick(u)};
+  return tok;
+}
+
+function renderHand(){
+  const scroll=$('handScroll');
+  scroll.innerHTML='';
+  hand.forEach(card=>{
+    const t=UNIT_TYPES[card.typeId];
+    const canPlay=isPlayerSky?t.faction==='heaven':t.faction==='ember';
+    const cardEl=document.createElement('div');
+    cardEl.className=`card ${t.faction}${selectedCard&&selectedCard.id===card.id?' selected':''}${!canPlay?' unplayable':''}${canPlay&&energy<t.cost?' disabled':''}`;
+    cardEl.innerHTML=`
+      <div class="c-cost">${t.cost}</div>
+      <div class="c-icon">${t.icon}</div>
+      <div class="c-name">${t.name}</div>
+      <div class="c-stats"><span>⚔${t.atk}</span><span>❤${t.hp}</span><span>🏃${t.mov}</span></div>
+    `;
+    cardEl.onclick=(e)=>{e.stopPropagation();selectHandCard(card)};
+    scroll.appendChild(cardEl);
+  });
+}
+
+function selectHandCard(card){
+  const t=UNIT_TYPES[card.typeId];
+  if(energy<t.cost){toast('⚡ 能量不足！');return;}
+  if(cardsPlayedThisTurn>=3){toast('⚠ 本回合已出3张牌');return;}
+  if(hand.length===0) return;
+  if(selectedCard&&selectedCard.id===card.id){
+    selectedCard=null; actionMode=null;
+  } else {
+    selectedCard=card; actionMode='deploy';
+    selectedUnit=null;
+  }
+  renderAll();
+  updateActionHint();
+}
+
+function updateActionHint(){
+  const hints={
+    'deploy':'选择己方半场空格部署',
+    'move':'选择绿色格子移动',
+    'attack':'选择红色目标攻击',
+    'skill':'选择技能目标'
+  };
+  $('actionHint').textContent=hints[actionMode]||'选择手牌，再点击己方空格部署';
+}
+
+// =============================
+//  ACTIONS
+// =============================
+function onCellClick(x,y){}
+
+function onBaseClick(faction){
+  if(!selectedUnit||actionMode!=='attack') return;
+  if(faction===selectedUnit.faction) return;
+  attackBase(faction);
+}
+
+function deployCard(x,y){
+  if(!selectedCard) return;
+  if(x>4){toast('⚠ 只能在己方半场部署！');return;}
+  const t=UNIT_TYPES[selectedCard.typeId];
+  if(energy<t.cost){toast('⚡ 能量不足');return;}
+  // count units already on field for this faction
+  const fieldCount=units.filter(u=>u.faction===t.faction&&!u.dead).length;
+  if(fieldCount>=5){toast('⚠ 场上已达5个单位上限！');return;}
+  // consume energy
+  energy-=t.cost;
+  // remove from hand
+  hand=hand.filter(c=>c.id!==selectedCard.id);
+  // create unit
+  const unit={
+    id:uid++, typeId:selectedCard.typeId,
+    x,y, hp:t.hp, maxHp:t.hp, faction:t.faction,
+    hasMoved:false, hasAttacked:false, sleeping:true, shield:0, movBuff:0, dead:false
+  };
+  units.push(unit);
+  selectedCard=null; actionMode=null;
+  cardsPlayedThisTurn++;
+  toast(`${t.icon} ${t.name} 部署！`);
+  saveGame();
+  renderAll();
+  updateActionHint();
+}
+
+function onUnitClick(u){
+  if(!gameActive) return;
+  const t=UNIT_TYPES[u.typeId];
+  const isOwn=u.faction===(isPlayerSky?'heaven':'ember');
+  if(!isOwn) return; // can't click enemy units directly
+
+  if(selectedUnit&&selectedUnit.id===u.id){
+    // deselect
+    selectedUnit=null; selectedCard=null; actionMode=null;
+  } else {
+    selectedUnit=u;
+    selectedCard=null;
+    // show skill if can activate
+    if(!u.hasAttacked&&energy>=t.skCost){
+      showSkillPopup(u);
+    } else {
+      closeSkill();
+    }
+    actionMode=null;
+  }
+  renderAll();
+  updateActionHint();
+}
+
+function moveUnit(tx,ty){
+  if(!selectedUnit||selectedUnit.hasMoved) return;
+  const u=selectedUnit;
+  const t=UNIT_TYPES[u.typeId];
+  const dist=manhattan(u.x,u.y,tx,ty);
+  const maxMov=t.mov+(u.movBuff||0);
+  if(dist>maxMov){toast('⚠ 超出移动范围！');return;}
+  if(dist===0) return;
+  u.x=tx; u.y=ty;
+  u.hasMoved=true;
+  selectedUnit=null; actionMode=null;
+  saveGame();
+  renderAll();
+  updateActionHint();
+}
+
+function attackTarget(enemy){
+  if(!selectedUnit||selectedUnit.hasAttacked) return;
+  const u=selectedUnit;
+  const t=UNIT_TYPES[u.typeId];
+  const dist=manhattan(u.x,u.y,enemy.x,enemy.y);
+  if(dist>t.rng){toast('⚠ 目标超出攻击范围！');return;}
+  u.hasAttacked=true;
+  // deal damage
+  const dmg=t.atk;
+  applyDamageToUnit(enemy, dmg, u);
+  toast(`⚔ ${t.name} 攻击！`);
+  selectedUnit=null; actionMode=null;
+  checkGameOver();
+  saveGame();
+  renderAll();
+  updateActionHint();
+}
+
+function attackBase(faction){
+  if(!selectedUnit||selectedUnit.hasAttacked) return;
+  const t=UNIT_TYPES[selectedUnit.typeId];
+  const dist=manhattan(selectedUnit.x,selectedUnit.y, faction==='heaven'?0:8, 2);
+  if(dist>t.rng){toast('⚠ 超出攻击范围！');return;}
+  selectedUnit.hasAttacked=true;
+  const dmg=t.atk;
+  if(faction==='heaven'){heavenHP=Math.max(0,heavenHP-dmg);showFloat(0,2,`-${dmg}`,'dmg');}
+  else{emberHP=Math.max(0,emberHP-dmg);showFloat(8,2,`-${dmg}`,'dmg');}
+  toast(`⚔ 攻击敌方主堡 -${dmg}`);
+  selectedUnit=null; actionMode=null;
+  checkGameOver();
+  saveGame();
+  renderAll();
+  updateActionHint();
+}
+
+function applyDamageToUnit(target, dmg, source){
+  const prevHp=target.hp;
+  if(target.shield>0){
+    const abs=Math.min(target.shield,dmg);
+    target.shield-=abs;
+    dmg-=abs;
+    showFloat(target.x,target.y,`-${abs}🛡️`,'shield');
+  }
+  if(dmg>0){
+    target.hp=Math.max(0,target.hp-dmg);
+    showFloat(target.x,target.y,`-${dmg}`,'dmg');
+  }
+  if(target.hp<=0){
+    target.dead=true;
+    discard.push({id:target.id, typeId:target.typeId, faction:target.faction});
+    toast(`${UNIT_TYPES[target.typeId].icon} ${UNIT_TYPES[target.typeId].name} 被消灭！`);
+  }
+}
+
+function showFloat(x,y,text,type){
+  const boardEl=$('board');
+  const tok=document.createElement('div');
+  tok.className=`float-text ${type}`;
+  tok.textContent=text;
+  tok.style.left=(x*57+20)+'px';
+  tok.style.top=(y*57+10)+'px';
+  boardEl.style.position='relative';
+  boardEl.appendChild(tok);
+  setTimeout(()=>tok.remove(),800);
+}
+
+// =============================
+//  SKILL SYSTEM
+// =============================
+function showSkillPopup(u){
+  const t=UNIT_TYPES[u.typeId];
+  if(!t.skill) return;
+  $('skTitle').textContent=`${t.icon} ${t.skill}`;
+  $('skDesc').textContent=t.skDesc;
+  if(energy>=t.skCost){
+    $('skActivate').style.display='block';
+    $('skActivate').onclick=()=>executeSkill(u);
+    $('skActivate').textContent=`激活 (⚡${t.skCost})`;
+  } else {
+    $('skActivate').style.display='none';
+  }
+  $('skillPopup').classList.add('show');
+}
+function closeSkill(){$('skillPopup').classList.remove('show')}
+function activateSkill(){} // merged into executeSkill
+function executeSkill(u){
+  if(!u||u.dead) return;
+  const t=UNIT_TYPES[u.typeId];
+  if(energy<t.skCost){toast('⚡ 能量不足！');return;}
+  energy-=t.skCost;
+  u.hasAttacked=true;
+  closeSkill();
+  toast(`${t.icon} 发动 ${t.skill}！`);
+
+  // skill types
+  if(t.skShieldAll){
+    units.filter(un=>un.faction===u.faction&&!un.dead).forEach(un=>{
+      un.shield=(un.shield||0)+t.skShieldAll;
+      showFloat(un.x,un.y,`+${t.skShieldAll}🛡️`,'shield');
+    });
+  }
+  if(t.skBuffMov){
+    units.filter(un=>un.faction===u.faction&&!un.dead).forEach(un=>{
+      un.movBuff=(un.movBuff||0)+t.skBuffMov;
+    });
+  }
+  if(t.skShieldTarget){
+    // find selected unit/enemy in range
+    const target=units.find(un=>un.faction!==u.faction&&!un.dead);
+    if(target){
+      target.shield=(target.shield||0)+t.skShieldTarget;
+      showFloat(target.x,target.y,`+${t.skShieldTarget}🛡️`,'shield');
+    }
+  }
+  if(t.skDmg>0){
+    const target=units.find(un=>un.faction!==u.faction&&!un.dead);
+    if(target) applyDamageToUnit(target, t.skDmg, u);
+  }
+  checkGameOver();
+  saveGame();
+  renderAll();
+  updateActionHint();
+}
+
+// =============================
+//  AI (simple)
+// =============================
+function runAITurn(cb){
+  // AI is ember faction — AI has its own energy pool
+  const aiFaction='ember';
+  let aiEnergy=Math.min(energy+1,10); // AI energy mirrors turn pacing
+  let played=0;
+  // collect deploy spots in ember half (x>=5)
+  const deploySpots=[];
+  for(let x=5;x<9;x++) for(let y=0;y<5;y++) deploySpots.push({x,y});
+  const spots=shuffle([...deploySpots]);
+  // pick playable cards
+  const playable=hand.filter(c=>UNIT_TYPES[c.typeId].faction===aiFaction&&UNIT_TYPES[c.typeId].cost<=aiEnergy);
+  playable.slice(0,2).forEach((card,idx)=>{
+    if(idx>=spots.length) return;
+    const t=UNIT_TYPES[card.typeId];
+    if(aiEnergy<t.cost) return;
+    const spot=spots[idx];
+    aiEnergy-=t.cost;
+    hand=hand.filter(c=>c.id!==card.id);
+    units.push({id:uid++,typeId:card.typeId,x:spot.x,y:spot.y,hp:t.hp,maxHp:t.hp,faction:aiFaction,hasMoved:false,hasAttacked:false,sleeping:false,shield:0,movBuff:0,dead:false});
+    played++;
+  });
+  // AI: attack with units that can
+  units.filter(u=>u.faction===aiFaction&&!u.dead&&!u.sleeping&&!u.hasAttacked).forEach(u=>{
+    const t=UNIT_TYPES[u.typeId];
+    const inRange=units.filter(un=>un.faction==='heaven'&&!un.dead&&manhattan(u.x,u.y,un.x,un.y)<=t.rng);
+    if(inRange.length>0){
+      applyDamageToUnit(inRange[0],t.atk,u);
+      u.hasAttacked=true;
+    } else if(manhattan(u.x,u.y,0,2)<=t.rng){
+      heavenHP=Math.max(0,heavenHP-t.atk);
+      showFloat(0,2,`-${t.atk}`,'dmg');
+    }
+  });
+  checkGameOver();
+  renderAll();
+  setTimeout(cb,600);
+}
+
+function runResolutionPhase(){
+  // Shield decay
+  units.forEach(u=>{
+    if(u.shield>0){u.shield=Math.max(0,u.shield-1);showFloat(u.x,u.y,'🛡️-1','shield');}
+  });
+  renderAll();
+}
+
+// =============================
+//  SURRENDER
+// =============================
+function surrender(){
+  if(!gameActive) return;
+  if(confirm('确定投降？')) gameOver(isPlayerSky?'ember':'heaven');
+}
+
+// =============================
+//  BOOT
+// =============================
+document.addEventListener('DOMContentLoaded',()=>{
+  initBoard();
+  // splash click to dismiss
+  $('splash').addEventListener('click',()=>{
+    $('splash').classList.add('logout');
+    $('startMenu').classList.add('show');
+  });
+  // Restore save if exists
+  const saved=loadGame();
+  if(saved){
+    $('splash').classList.add('logout');
+    // TODO: restore from save — for now just show start menu
+    $('startMenu').classList.add('show');
+  } else {
+    // splash shown
+  }
+});
+</script>
+</body>
+</html>
