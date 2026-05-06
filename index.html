@@ -208,6 +208,9 @@ body{margin:0;padding:0;background:#0d0d1a;color:#e0e0e0;font-family:'Noto Sans 
     <div id="handScroll"></div>
   </div>
   <div id="actionBar">
+    <button class="act-btn primary" id="actMove" onclick="cmdMove()" style="display:none">移动</button>
+    <button class="act-btn danger" id="actAttack" onclick="cmdAttack()" style="display:none">攻击</button>
+    <button class="act-btn secondary" id="actSkill" onclick="cmdSkill()" style="display:none">技能</button>
     <button class="act-btn primary" id="endTurnBtn" onclick="endTurn()">结束回合</button>
     <button class="act-btn danger" onclick="surrender()">投降</button>
     <div id="actionHint">选择手牌，再点击己方空格部署</div>
@@ -424,10 +427,6 @@ function restartGame(){
 // =============================
 function startDrawPhase(){
   energy=Math.min(energy+1,10);
-  // Shield decay at turn start
-  units.forEach(u=>{
-    if(u.shield>0){u.shield=Math.max(0,u.shield-1);showFloat(u.x,u.y,'🛡️-1','shield');}
-  });
   drawCard();
   cardsPlayedThisTurn=0;
   units.forEach(u=>{u.hasMoved=false;u.hasAttacked=false;u.sleeping=false;u.dead=false});
@@ -442,6 +441,7 @@ function endTurn(){
   saveGame();
   runAITurn(()=>{
     turn++;
+    runResolutionPhase();
     startDrawPhase();
   });
 }
@@ -671,11 +671,12 @@ function onUnitClick(u){
     selectedUnit=u;
     selectedCard=null;
     // show skill if can activate
-    if(!u.hasAttacked&&energy>=t.skCost){
-      showSkillPopup(u);
-    } else {
-      closeSkill();
-    }
+    const hasSk=energy>=t.skCost&&!u.hasAttacked;
+    $('actMove').style.display=u.hasMoved?'none':'inline-block';
+    $('actAttack').style.display=u.hasAttacked?'none':'inline-block';
+    $('actSkill').style.display=hasSk?'inline-block':'none';
+    if(hasSk) showSkillPopup(u);
+    else closeSkill();
     actionMode=null;
   }
   renderAll();
@@ -812,9 +813,35 @@ function executeSkill(u){
       showFloat(target.x,target.y,`+${t.skShieldTarget}🛡️`,'shield');
     }
   }
-  if(t.skDmg>0){
+  if(t.skKillEnergy>0&&target.dead){
+    energy=Math.min(energy+t.skKillEnergy,maxEnergy);
+    showFloat(u.x,u.y,`⚡+${t.skKillEnergy}`,'shield');
+  }
+  if(t.skAOE>0&&target){
+    // AOE: target cell + adjacent cells (1 = 3x3 centered on target)
+    const aoeRange=t.skAOE;
+    const affected=units.filter(un=>!un.dead&&un.faction!==u.faction&&
+      manhattan(target.x,target.y,un.x,un.y)<=aoeRange&&!(un.x===target.x&&un.y===target.y));
+    affected.forEach(un=>{
+      applyDamageToUnit(un,t.skDmg,u);
+    });
+  } else if(t.skDmg>0){
     const target=units.find(un=>un.faction!==u.faction&&!un.dead);
-    if(target) applyDamageToUnit(target, t.skDmg, u);
+    if(target) applyDamageToUnit(target,t.skDmg,u);
+  }
+  if(t.skLine){
+    // Line AOE: from caster forward in straight line
+    const dirX=target?Math.sign(target.x-u.x):1;
+    const dirY=target?Math.sign(target.y-u.y):0;
+    if(dirX===0&&dirY===0){} else {
+      for(let step=1;step<=t.skRange;step++){
+        const lx=u.x+dirX*step;
+        const ly=u.y+dirY*step;
+        if(lx<0||lx>=9||ly<0||ly>=5) break;
+        const hit=units.filter(un=>!un.dead&&un.faction!==u.faction&&un.x===lx&&un.y===ly);
+        hit.forEach(un=>applyDamageToUnit(un,t.skDmg,u));
+      }
+    }
   }
   checkGameOver();
   saveGame();
@@ -864,11 +891,52 @@ function runAITurn(cb){
 }
 
 function runResolutionPhase(){
+  // Process DOT (Damage Over Time) —灼烧等
+  units.forEach(u=>{
+    if(u.dead) return;
+    if(u.dot&&u.dot>0){
+      const dotDmg=Math.min(u.dot,3); // cap DOT at 3 per tick
+      u.hp=Math.max(0,u.hp-dotDmg);
+      showFloat(u.x,u.y,`-${dotDmg}🔥`,'dmg');
+      u.dot=Math.max(0,u.dot-1);
+      if(u.dot===0) delete u.dot;
+    }
+  });
   // Shield decay
   units.forEach(u=>{
     if(u.shield>0){u.shield=Math.max(0,u.shield-1);showFloat(u.x,u.y,'🛡️-1','shield');}
   });
+  // Buff decay (movBuff lasts 2 turns — decremented here)
+  units.forEach(u=>{
+    if(u.movBuff>0){
+      u.movBuff=Math.max(0,u.movBuff-1);
+      if(u.movBuff===0) delete u.movBuff;
+    }
+  });
+  checkGameOver();
   renderAll();
+}
+
+// =============================
+//  ACTION COMMANDS
+// =============================
+function cmdMove(){
+  if(!selectedUnit) return;
+  actionMode='move';
+  renderAll();
+  updateActionHint();
+}
+function cmdAttack(){
+  if(!selectedUnit) return;
+  actionMode='attack';
+  renderAll();
+  updateActionHint();
+}
+function cmdSkill(){
+  if(!selectedUnit) return;
+  const t=UNIT_TYPES[selectedUnit.typeId];
+  if(energy<t.skCost){toast('⚡ 能量不足！');return;}
+  executeSkill(selectedUnit);
 }
 
 // =============================
