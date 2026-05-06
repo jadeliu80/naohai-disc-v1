@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0d1a">
+<meta name="apple-status-bar-style" content="black-translucent">
 <title>圆盘纪元</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -158,6 +159,75 @@ body{margin:0;padding:0;background:#0d0d1a;color:#e0e0e0;font-family:'Noto Sans 
 .float-text.dmg{color:#ff4444}
 .float-text.heal{color:#44ff44}
 .float-text.shield{color:#44aaff}
+
+/* ===== IMMERSIVE / NATIVE FEEL ===== */
+html,body{-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:#0d0d1a;z-index:9999;pointer-events:none}
+#hud{padding-top:calc(8px + env(safe-area-inset-top,0px));background:linear-gradient(180deg,#0d0d1a 0%,#16213e 100%);min-height:56px}
+
+/* Timer bar color transitions */
+#timerBar div{transition:width 1s linear,background 0.5s ease}
+#timerBar.warning div{background:linear-gradient(90deg,#ff9800,#ff6b35)}
+#timerBar.danger div{background:linear-gradient(90deg,#f44336,#c0401a);animation:pulseDanger 0.5s infinite}
+@keyframes pulseDanger{0%,100%{opacity:1}50%{opacity:0.7}}
+
+/* Faction-specific unit glow effects */
+.unit-token[data-faction="heaven"]{box-shadow:0 2px 8px rgba(122,184,255,0.4),0 0 12px rgba(122,184,255,0.15)}
+.unit-token[data-faction="ember"]{box-shadow:0 2px 8px rgba(255,107,53,0.4),0 0 12px rgba(255,107,53,0.15)}
+
+/* Skill activation glow by element */
+.unit-token.skill-fire{animation:skillFireGlow 0.6s ease}
+.unit-token.skill-ice{animation:skillIceGlow 0.6s ease}
+.unit-token.skill-wind{animation:skillWindGlow 0.6s ease}
+.unit-token.skill-wood{animation:skillWoodGlow 0.6s ease}
+.unit-token.skill-dark{animation:skillDarkGlow 0.6s ease}
+@keyframes skillFireGlow{0%{box-shadow:0 0 0 0 rgba(255,80,0,0.8)}100%{box-shadow:0 0 20px 8px rgba(255,80,0,0)}}
+@keyframes skillIceGlow{0%{box-shadow:0 0 0 0 rgba(100,200,255,0.8)}100%{box-shadow:0 0 20px 8px rgba(100,200,255,0)}}
+@keyframes skillWindGlow{0%{box-shadow:0 0 0 0 rgba(80,220,100,0.8)}100%{box-shadow:0 0 20px 8px rgba(80,220,100,0)}}
+@keyframes skillWoodGlow{0%{box-shadow:0 0 0 0 rgba(180,120,50,0.8)}100%{box-shadow:0 0 20px 8px rgba(180,120,50,0)}}
+@keyframes skillDarkGlow{0%{box-shadow:0 0 0 0 rgba(150,50,255,0.8)}100%{box-shadow:0 0 20px 8px rgba(150,50,255,0)}}
+
+/* HP bar smooth gradient color based on HP percentage */
+.unit-token .u-hp-fill{transition:width 0.4s ease,background 0.4s ease}
+
+/* Card selected state enhancement */
+.card.selected{box-shadow:0 0 20px rgba(255,255,255,0.6),0 0 40px rgba(122,184,255,0.3);transform:translateY(-6px) scale(1.03)}
+.card:active:not(.disabled){transform:scale(0.96)}
+
+/* Deploy zone shimmer */
+.cell.deployable{animation:deployShimmer 1.5s ease infinite}
+@keyframes deployShimmer{0%,100%{box-shadow:inset 0 0 8px rgba(80,220,100,0.25)}50%{box-shadow:inset 0 0 16px rgba(80,220,100,0.5)}}
+
+/* Attack target pulse */
+.cell.attack-target{animation:attackPulse 0.8s ease infinite}
+@keyframes attackPulse{0%,100%{box-shadow:inset 0 0 8px rgba(255,60,60,0.3)}50%{box-shadow:inset 0 0 16px rgba(255,60,60,0.7)}}
+
+/* Selected unit highlight ring */
+.unit-token.selected{animation:selectedRing 1s ease infinite}
+@keyframes selectedRing{0%,100%{box-shadow:0 0 0 3px rgba(255,255,255,0.6),0 2px 8px rgba(0,0,0,0.6)}50%{box-shadow:0 0 0 5px rgba(255,255,255,0.3),0 2px 8px rgba(0,0,0,0.6)}}
+
+/* Unit info tooltip */
+#unitTooltip{position:absolute;background:#1a1a2e;border:1px solid #444;border-radius:10px;padding:10px;width:140px;z-index:150;display:none;font-size:12px;color:#ddd;box-shadow:0 4px 16px rgba(0,0,0,0.5)}
+#unitTooltip.show{display:block}
+#unitTooltip .ut-name{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px}
+#unitTooltip .ut-stat{color:#aaa;margin:2px 0}
+#unitTooltip .ut-skill{color:#ffd700;font-size:11px;margin-top:6px;border-top:1px solid #333;padding-top:6px}
+
+/* Faction color banners */
+.hud-faction.sky span{background:linear-gradient(135deg,#7ab8ff,#5a80c4);color:#0d0d1a}
+.hud-faction.ember span{background:linear-gradient(135deg,#ff6b35,#d45a20);color:#fff}
+
+
+/* Attack range overlay */
+.cell.attack-range{background:rgba(255,140,0,0.15);box-shadow:inset 0 0 8px rgba(255,140,0,0.3)}
+
+/* Unit info tooltip */
+#unitTooltip{position:fixed;bottom:52vh;left:50%;transform:translateX(-50%);background:#16213e;border:1px solid #444;border-radius:10px;padding:12px;width:160px;z-index:150;display:none;font-size:12px;color:#ddd;box-shadow:0 4px 20px rgba(0,0,0,0.6);pointer-events:none}
+#unitTooltip.show{display:block}
+#unitTooltip .ut-name{font-size:14px;font-weight:700;margin-bottom:6px;color:#fff}
+#unitTooltip .ut-row{display:flex;justify-content:space-between;color:#aaa;margin:3px 0}
+#unitTooltip .ut-skill{color:#ffd700;font-size:11px;margin-top:8px;border-top:1px solid #333;padding-top:6px}
+
 </style>
 </head>
 <body>
@@ -208,10 +278,8 @@ body{margin:0;padding:0;background:#0d0d1a;color:#e0e0e0;font-family:'Noto Sans 
     <div id="handScroll"></div>
   </div>
   <div id="actionBar">
-    <button class="act-btn primary" id="actMove" onclick="cmdMove()" style="display:none">移动</button>
-    <button class="act-btn danger" id="actAttack" onclick="cmdAttack()" style="display:none">攻击</button>
-    <button class="act-btn secondary" id="actSkill" onclick="cmdSkill()" style="display:none">技能</button>
     <button class="act-btn primary" id="endTurnBtn" onclick="endTurn()">结束回合</button>
+    <button class="act-btn secondary" id="pauseBtn" onclick="togglePause()">暂停</button>
     <button class="act-btn danger" onclick="surrender()">投降</button>
     <div id="actionHint">选择手牌，再点击己方空格部署</div>
   </div>
@@ -235,6 +303,14 @@ body{margin:0;padding:0;background:#0d0d1a;color:#e0e0e0;font-family:'Noto Sans 
   <h2 class="menu-title">圆盘纪元</h2>
   <div class="menu-sub">NAOHAI DISC</div>
   <button class="menu-btn start" onclick="startGame()">开始游戏</button>
+</div>
+
+<!-- PAUSE OVERLAY -->
+<div id="pauseOverlay" class="overlay">
+  <div class="o-icon">⏸</div>
+  <h2>游戏暂停</h2>
+  <p>回合 ${turn}</p>
+  <button class="restart-btn" onclick="togglePause()">继续游戏</button>
 </div>
 
 <!-- GAME OVER -->
@@ -297,6 +373,17 @@ const UNIT_TYPES = {
   }
 };
 
+const PORTRAITS = {
+  discThrower:"",
+  airstream:"",
+  discHunter:"",
+  discForger:"",
+  skyArbiter:"",
+  skySentinel:"",
+  windDancer:""
+};
+
+
 // =============================
 //  STATE
 // =============================
@@ -313,6 +400,7 @@ let cardsPlayedThisTurn = 0;
 let timerInterval = null;
 let timeLeft = 60;
 let gameActive = false;
+let isPaused = false;
 let hand = [];         // array of card objects
 let deck = [];          // array of card ids
 let discard = [];
@@ -427,21 +515,33 @@ function restartGame(){
 // =============================
 function startDrawPhase(){
   energy=Math.min(energy+1,10);
+  // Shield decay at turn start
+  units.forEach(u=>{
+    if(u.shield>0){u.shield=Math.max(0,u.shield-1);showFloat(u.x,u.y,'🛡️-1','shield');}
+  });
   drawCard();
   cardsPlayedThisTurn=0;
   units.forEach(u=>{u.hasMoved=false;u.hasAttacked=false;u.sleeping=false;u.dead=false});
   renderAll();
   updatePhaseUI('ACTION_PHASE');
-  startTimer();
+  if(!isPaused) startTimer();
 }
 
 function endTurn(){
   if(!gameActive) return;
   stopTimer();
+  // RESOLUTION_PHASE: DOT / shield decay before AI turn
+  runResolutionPhase();
   saveGame();
   runAITurn(()=>{
+    // 20-turn limit check
     turn++;
-    runResolutionPhase();
+    if(turn > 20){
+      // Force end: compare base HP
+      const winner = heavenHP > emberHP ? 'heaven' : (emberHP > heavenHP ? 'ember' : 'heaven');
+      gameOver(winner);
+      return;
+    }
     startDrawPhase();
   });
 }
@@ -489,6 +589,12 @@ function stopTimer(){
 function updateTimerUI(){
   $('timerDisplay').textContent=`⏱ ${timeLeft}s`;
   $('timerFill').style.width=(timeLeft/60*100)+'%';
+  // Timer bar color: green->yellow->orange->red as time runs out
+  const pct=timeLeft/60;
+  const bar=$('timerBar');
+  if(timeLeft<=10){bar.className='danger';}
+  else if(timeLeft<=20){bar.className='warning';}
+  else{bar.className='';}
 }
 
 // =============================
@@ -517,6 +623,9 @@ function renderBoard(){
       const cell=document.createElement('div');
       cell.className='cell';
       cell.dataset.x=x; cell.dataset.y=y;
+      // Faction-based cell tinting
+      const cellFaction=x<=4?'heaven':'ember';
+      cell.dataset.faction=cellFaction;
 
       const info=board[y][x];
       if(info&&info.isBase){
@@ -563,7 +672,9 @@ function renderBoard(){
 function renderUnit(u){
   const t=UNIT_TYPES[u.typeId];
   const tok=document.createElement('div');
-  tok.className=`unit-token ${t.faction}${u.sleeping?' sleeping':''}`;
+  tok.className=`unit-token ${t.faction}${u.sleeping?' sleeping':''}${selectedUnit&&selectedUnit.id===u.id?' selected':''}`;
+  tok.dataset.faction=t.faction;
+  tok.dataset.unitId=u.id;
   const hpPct=(u.hp/UNIT_TYPES[u.typeId].hp)*100;
   const hpClass=hpPct>60?'hi':hpPct>30?'mid':'low';
   tok.innerHTML=`
@@ -658,6 +769,17 @@ function deployCard(x,y){
   updateActionHint();
 }
 
+// Unit tooltip functions
+function showUnitTooltip(u){
+  var t=UNIT_TYPES[u.typeId];
+  var tip=$('unitTooltip');
+  var hpPct=Math.round((u.hp/t.hp)*100);
+  tip.innerHTML='<div class="ut-name">'+t.icon+' '+t.name+'</div><div class="ut-row"><span>生命</span><span style="color:'+(hpPct>60?'#4caf50':hpPct>30?'#ff9800':'#f44336')+'">'+u.hp+'/'+t.hp+'</span></div><div class="ut-row"><span>攻击</span><span>'+t.atk+'</span></div><div class="ut-row"><span>移动</span><span>'+(t.mov+(u.movBuff||0))+'</span></div><div class="ut-row"><span>射程</span><span>'+t.rng+'</span></div>'+(t.skill?'<div class="ut-skill">'+t.icon+' '+t.skill+' (⚡'+t.skCost+')</div>':'');
+  tip.classList.add('show');
+}
+function hideUnitTooltip(){
+  $('unitTooltip').classList.remove('show');
+}
 function onUnitClick(u){
   if(!gameActive) return;
   const t=UNIT_TYPES[u.typeId];
@@ -667,22 +789,44 @@ function onUnitClick(u){
   if(selectedUnit&&selectedUnit.id===u.id){
     // deselect
     selectedUnit=null; selectedCard=null; actionMode=null;
+    hideUnitTooltip();
   } else {
     selectedUnit=u;
     selectedCard=null;
+    showUnitTooltip(u);
+    // Show attack range cells
+    highlightAttackRange(u);
     // show skill if can activate
-    const hasSk=energy>=t.skCost&&!u.hasAttacked;
-    $('actMove').style.display=u.hasMoved?'none':'inline-block';
-    $('actAttack').style.display=u.hasAttacked?'none':'inline-block';
-    $('actSkill').style.display=hasSk?'inline-block':'none';
-    if(hasSk) showSkillPopup(u);
-    else closeSkill();
+    if(!u.hasAttacked&&energy>=t.skCost){
+      showSkillPopup(u);
+    } else {
+      closeSkill();
+    }
     actionMode=null;
   }
   renderAll();
   updateActionHint();
 }
 
+
+// Show attack range when selecting a unit (highlight enemy cells in range)
+function highlightAttackRange(u){
+  // Clear any existing highlight
+  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('attack-range'));
+  // For now, renderBoard handles attack-target highlighting via actionMode='attack'
+  // This function can be extended to show range overlay
+  // But we do it differently: when unit selected, show range through board cell colors
+  const range=UNIT_TYPES[u.typeId].rng;
+  for(let y=0;y<5;y++){
+    for(let x=0;x<9;x++){
+      const dist=manhattan(u.x,u.y,x,y);
+      if(dist>0&&dist<=range){
+        const cell=document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+        if(cell) cell.classList.add('attack-range');
+      }
+    }
+  }
+}
 function moveUnit(tx,ty){
   if(!selectedUnit||selectedUnit.hasMoved) return;
   const u=selectedUnit;
@@ -750,6 +894,14 @@ function applyDamageToUnit(target, dmg, source){
     target.dead=true;
     discard.push({id:target.id, typeId:target.typeId, faction:target.faction});
     toast(`${UNIT_TYPES[target.typeId].icon} ${UNIT_TYPES[target.typeId].name} 被消灭！`);
+    // 申公豹 kill restore energy
+    if(source){
+      const srcType = UNIT_TYPES[source.typeId];
+      if(srcType.skKillEnergy && source.faction !== target.faction){
+        energy = Math.min(maxEnergy, energy + srcType.skKillEnergy);
+        showFloat(source.x, source.y, `+${srcType.skKillEnergy}⚡`, 'shield');
+      }
+    }
   }
 }
 
@@ -771,12 +923,19 @@ function showFloat(x,y,text,type){
 function showSkillPopup(u){
   const t=UNIT_TYPES[u.typeId];
   if(!t.skill) return;
-  $('skTitle').textContent=`${t.icon} ${t.skill}`;
+  const ec=u.faction==='heaven' ? '#7ab8ff' : '#ff6b35';
+  const card=$('skillCard');
+  card.style.borderColor=ec;
+  card.style.boxShadow='0 0 20px '+ec+'66';
+  $('skTitle').textContent=ec+' '+t.skill;
+  $('skTitle').style.color=ec;
   $('skDesc').textContent=t.skDesc;
   if(energy>=t.skCost){
     $('skActivate').style.display='block';
     $('skActivate').onclick=()=>executeSkill(u);
-    $('skActivate').textContent=`激活 (⚡${t.skCost})`;
+    $('skActivate').textContent='激活 (⚡'+t.skCost+')';
+    $('skActivate').style.background=ec;
+    $('skActivate').style.color='#0d0d1a';
   } else {
     $('skActivate').style.display='none';
   }
@@ -791,9 +950,57 @@ function executeSkill(u){
   energy-=t.skCost;
   u.hasAttacked=true;
   closeSkill();
-  toast(`${t.icon} 发动 ${t.skill}！`);
+  toast(t.icon+' 发动 '+t.skill+'！');
+  // Apply faction-colored skill glow to unit token
+  const unitEl=document.querySelector('.unit-token[data-id="'+u.id+'"]');
+  if(unitEl){
+    var skillClass='skill-'+t.icon.replace(/[^a-z]/gi,'wind').toLowerCase().slice(0,4);
+    // Map icon to element type
+    if(t.icon==='🔥') skillClass='skill-fire';
+    else if(t.icon==='❄️') skillClass='skill-ice';
+    else if(t.icon==='🌪️'||t.icon==='⚡') skillClass='skill-wind';
+    else if(t.icon==='🏹') skillClass='skill-wood';
+    else if(t.icon==='🌑') skillClass='skill-dark';
+    else skillClass='skill-wind';
+    unitEl.classList.add(skillClass);
+    setTimeout(()=>unitEl.classList.remove(skillClass),700);
+  }
 
   // skill types
+  // 哪吒 AOE: 三头六臂 — 对目标及相邻1格敌人各造成2点伤害
+  if(t.skDmg>0 && t.skAOE===1){
+    const target=units.find(un=>un.faction!==u.faction&&!un.dead);
+    if(target){
+      applyDamageToUnit(target, t.skDmg, u);
+      // AOE: adjacent cells (1 cell away in 4 directions)
+      const dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+      dirs.forEach(([dx,dy])=>{
+        const ax=target.x+dx, ay=target.y+dy;
+        if(ax<0||ax>8||ay<0||ay>4) return;
+        const adj=units.find(un=>un.x===ax&&un.y===ay&&un.faction!==u.faction&&!un.dead);
+        if(adj) applyDamageToUnit(adj, t.skDmg, u);
+      });
+    }
+  }
+  // 鹿童 AOE: 穿云箭 — 对直线上所有敌人造成3点伤害
+  if(t.skLine){
+    const target=units.find(un=>un.faction!==u.faction&&!un.dead);
+    if(target){
+      const dx=Math.sign(target.x-u.x), dy=Math.sign(target.y-u.y);
+      let cx=u.x+dx, cy=u.y+dy;
+      while(true){
+        if(cx<0||cx>8||cy<0||cy>4) break;
+        const hit=units.find(un=>un.x===cx&&un.y===cy&&un.faction!==u.faction&&!un.dead);
+        if(hit){
+          applyDamageToUnit(hit, t.skDmg, u);
+          // keep going for line AOE
+        }
+        if(cx===target.x&&cy===target.y) break;
+        cx+=dx; cy+=dy;
+        if(cx===u.x+dx*t.skRange||cy===u.y+dy*t.skRange) break;
+      }
+    }
+  }
   if(t.skShieldAll){
     units.filter(un=>un.faction===u.faction&&!un.dead).forEach(un=>{
       un.shield=(un.shield||0)+t.skShieldAll;
@@ -813,35 +1020,9 @@ function executeSkill(u){
       showFloat(target.x,target.y,`+${t.skShieldTarget}🛡️`,'shield');
     }
   }
-  if(t.skKillEnergy>0&&target.dead){
-    energy=Math.min(energy+t.skKillEnergy,maxEnergy);
-    showFloat(u.x,u.y,`⚡+${t.skKillEnergy}`,'shield');
-  }
-  if(t.skAOE>0&&target){
-    // AOE: target cell + adjacent cells (1 = 3x3 centered on target)
-    const aoeRange=t.skAOE;
-    const affected=units.filter(un=>!un.dead&&un.faction!==u.faction&&
-      manhattan(target.x,target.y,un.x,un.y)<=aoeRange&&!(un.x===target.x&&un.y===target.y));
-    affected.forEach(un=>{
-      applyDamageToUnit(un,t.skDmg,u);
-    });
-  } else if(t.skDmg>0){
+  if(t.skDmg>0){
     const target=units.find(un=>un.faction!==u.faction&&!un.dead);
-    if(target) applyDamageToUnit(target,t.skDmg,u);
-  }
-  if(t.skLine){
-    // Line AOE: from caster forward in straight line
-    const dirX=target?Math.sign(target.x-u.x):1;
-    const dirY=target?Math.sign(target.y-u.y):0;
-    if(dirX===0&&dirY===0){} else {
-      for(let step=1;step<=t.skRange;step++){
-        const lx=u.x+dirX*step;
-        const ly=u.y+dirY*step;
-        if(lx<0||lx>=9||ly<0||ly>=5) break;
-        const hit=units.filter(un=>!un.dead&&un.faction!==u.faction&&un.x===lx&&un.y===ly);
-        hit.forEach(un=>applyDamageToUnit(un,t.skDmg,u));
-      }
-    }
+    if(target) applyDamageToUnit(target, t.skDmg, u);
   }
   checkGameOver();
   saveGame();
@@ -891,52 +1072,26 @@ function runAITurn(cb){
 }
 
 function runResolutionPhase(){
-  // Process DOT (Damage Over Time) —灼烧等
-  units.forEach(u=>{
-    if(u.dead) return;
-    if(u.dot&&u.dot>0){
-      const dotDmg=Math.min(u.dot,3); // cap DOT at 3 per tick
-      u.hp=Math.max(0,u.hp-dotDmg);
-      showFloat(u.x,u.y,`-${dotDmg}🔥`,'dmg');
-      u.dot=Math.max(0,u.dot-1);
-      if(u.dot===0) delete u.dot;
-    }
-  });
   // Shield decay
   units.forEach(u=>{
     if(u.shield>0){u.shield=Math.max(0,u.shield-1);showFloat(u.x,u.y,'🛡️-1','shield');}
   });
-  // Buff decay (movBuff lasts 2 turns — decremented here)
-  units.forEach(u=>{
-    if(u.movBuff>0){
-      u.movBuff=Math.max(0,u.movBuff-1);
-      if(u.movBuff===0) delete u.movBuff;
-    }
-  });
-  checkGameOver();
   renderAll();
 }
 
 // =============================
-//  ACTION COMMANDS
+//  PAUSE
 // =============================
-function cmdMove(){
-  if(!selectedUnit) return;
-  actionMode='move';
-  renderAll();
-  updateActionHint();
-}
-function cmdAttack(){
-  if(!selectedUnit) return;
-  actionMode='attack';
-  renderAll();
-  updateActionHint();
-}
-function cmdSkill(){
-  if(!selectedUnit) return;
-  const t=UNIT_TYPES[selectedUnit.typeId];
-  if(energy<t.skCost){toast('⚡ 能量不足！');return;}
-  executeSkill(selectedUnit);
+function togglePause(){
+  if(!gameActive) return;
+  isPaused=!isPaused;
+  if(isPaused){
+    stopTimer();
+    $('pauseOverlay').classList.add('show');
+  } else {
+    $('pauseOverlay').classList.remove('show');
+    startTimer();
+  }
 }
 
 // =============================
@@ -968,5 +1123,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 });
 </script>
+<div id="unitTooltip"></div>
 </body>
 </html>
